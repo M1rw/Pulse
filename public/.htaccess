@@ -1,0 +1,29 @@
+# ═══════════════════════════════════════════════════════
+# Apache Rewrite Rules
+# 
+# All requests go through index.php. The router handles
+# the rest. Clean URLs, no ?r= nonsense.
+# ═══════════════════════════════════════════════════════
+
+RewriteEngine On
+
+# send everything to index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# prevent directory listing
+Options -Indexes
+
+# protect sensitive files
+<FilesMatch "\.(env|log|sql|md)$">
+    Require all denied
+</FilesMatch>

@@ -1,0 +1,23 @@
+# dependencies
+/vendor/
+
+# environment
+.env
+
+# storage (local dev data)
+/storage/logs/
+/storage/cache/
+/storage/views/
+/storage/*.db
+/storage/*.db-wal
+/storage/*.db-shm
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
