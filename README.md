@@ -38,6 +38,16 @@ php cli/pulse.php serve
 
 Open `http://localhost:8080` in your browser.
 
+## Deploying to Vercel
+
+Pulse is pre-configured for one-click deployment on [Vercel](https://vercel.com) using the `vercel-php` serverless runtime:
+
+1. Push your repository to GitHub / GitLab / Bitbucket.
+2. Import your repository in Vercel.
+3. Deploy!
+
+The application includes `vercel.json` routing and `api/index.php` serverless function handlers. On serverless instances, SQLite database initialization (schema migrations & seed data), sessions, and error logs automatically adapt to temporary writable storage (`/tmp`) without manual configuration.
+
 ## CLI Commands
 
 ```

@@ -152,6 +152,13 @@ class Request
 
     public function ip(): string
     {
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            return trim($ips[0]);
+        }
+        if (!empty($_SERVER['HTTP_X_REAL_IP'])) {
+            return trim($_SERVER['HTTP_X_REAL_IP']);
+        }
         return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     }
 

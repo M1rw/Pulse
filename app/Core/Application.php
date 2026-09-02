@@ -166,23 +166,48 @@ class Application
     private function createDbConnection(): \PDO
     {
         $driver = env('DB_DRIVER', 'sqlite');
-        $dbPath = env('DB_DATABASE', PULSE_STORAGE . '/pulse.db');
+        $dbPath = env('DB_DATABASE');
 
         if ($driver === 'sqlite') {
-            if (!str_starts_with($dbPath, '/') && !preg_match('/^[A-Za-z]:[\\\\\/]/', $dbPath)) {
+            if (!$dbPath) {
+                $dbPath = PULSE_STORAGE . '/pulse.db';
+            }
+
+            $isVercel = getenv('VERCEL') !== false || env('VERCEL') !== null;
+            $storageWritable = is_writable(PULSE_STORAGE) || (!file_exists(PULSE_STORAGE) && @is_writable(dirname(PULSE_STORAGE)));
+
+            if ($isVercel || !$storageWritable) {
+                if (str_starts_with($dbPath, PULSE_STORAGE) || !@is_writable(dirname($dbPath))) {
+                    $tmpDir = is_dir('/tmp') && is_writable('/tmp') ? '/tmp' : sys_get_temp_dir();
+                    $dbPath = $tmpDir . '/pulse.db';
+                }
+            } elseif (!str_starts_with($dbPath, '/') && !preg_match('/^[A-Za-z]:[\\\\\/]/', $dbPath)) {
                 $dbPath = PULSE_ROOT . '/' . $dbPath;
             }
-        }
 
-        // make sure the storage dir exists
-        if (!is_dir(dirname($dbPath))) {
-            mkdir(dirname($dbPath), 0755, true);
-        }
+            $dir = dirname($dbPath);
+            if (!is_dir($dir) && (@is_writable($dir) || @is_writable(dirname($dir)))) {
+                @mkdir($dir, 0755, true);
+            }
 
-        if ($driver === 'sqlite') {
+            $needsInit = !file_exists($dbPath);
+
             $pdo = new \PDO("sqlite:{$dbPath}");
-            $pdo->exec('PRAGMA journal_mode=WAL');
+            $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+            $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+
+            try {
+                $pdo->exec('PRAGMA journal_mode=WAL');
+            } catch (\Throwable $e) {
+                $pdo->exec('PRAGMA journal_mode=DELETE');
+            }
             $pdo->exec('PRAGMA foreign_keys=ON');
+
+            if ($needsInit) {
+                $this->initSqliteDatabase($pdo);
+            }
+
+            return $pdo;
         } else {
             $host = env('DB_HOST', '127.0.0.1');
             $name = env('DB_DATABASE', 'pulse');
@@ -200,6 +225,35 @@ class Application
         $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 
         return $pdo;
+    }
+
+    public function initSqliteDatabase(\PDO $pdo): void
+    {
+        $migrations = glob(PULSE_ROOT . '/database/migrations/*.sql') ?: [];
+        sort($migrations);
+        foreach ($migrations as $file) {
+            $sql = file_get_contents($file);
+            if ($sql) {
+                try {
+                    $pdo->exec($sql);
+                } catch (\PDOException $e) {
+                    // ignore if already executed
+                }
+            }
+        }
+
+        $seeds = glob(PULSE_ROOT . '/database/seeds/*.sql') ?: [];
+        sort($seeds);
+        foreach ($seeds as $file) {
+            $sql = file_get_contents($file);
+            if ($sql) {
+                try {
+                    $pdo->exec($sql);
+                } catch (\PDOException $e) {
+                    // ignore seed conflicts
+                }
+            }
+        }
     }
 
     private function registerRoutes(): void

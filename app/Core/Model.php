@@ -50,18 +50,45 @@ class Model implements \ArrayAccess, \JsonSerializable
                 }
             }
             if (self::$sharedDb === null) {
-                $dbPath = env('DB_DATABASE', PULSE_STORAGE . '/pulse.db');
-                if (!str_starts_with($dbPath, '/') && !preg_match('/^[A-Za-z]:[\\\\\/]/', $dbPath)) {
+                $dbPath = env('DB_DATABASE');
+                if (!$dbPath) {
+                    $dbPath = PULSE_STORAGE . '/pulse.db';
+                }
+
+                $isVercel = getenv('VERCEL') !== false || env('VERCEL') !== null;
+                $storageWritable = is_writable(PULSE_STORAGE) || (!file_exists(PULSE_STORAGE) && @is_writable(dirname(PULSE_STORAGE)));
+
+                if ($isVercel || !$storageWritable) {
+                    if (str_starts_with($dbPath, PULSE_STORAGE) || !@is_writable(dirname($dbPath))) {
+                        $tmpDir = is_dir('/tmp') && is_writable('/tmp') ? '/tmp' : sys_get_temp_dir();
+                        $dbPath = $tmpDir . '/pulse.db';
+                    }
+                } elseif (!str_starts_with($dbPath, '/') && !preg_match('/^[A-Za-z]:[\\\\\/]/', $dbPath)) {
                     $dbPath = PULSE_ROOT . '/' . $dbPath;
                 }
-                if (!is_dir(dirname($dbPath))) {
-                    mkdir(dirname($dbPath), 0755, true);
+
+                $dir = dirname($dbPath);
+                if (!is_dir($dir) && (@is_writable($dir) || @is_writable(dirname($dir)))) {
+                    @mkdir($dir, 0755, true);
                 }
+
+                $needsInit = !file_exists($dbPath);
+
                 self::$sharedDb = new \PDO("sqlite:{$dbPath}");
                 self::$sharedDb->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
                 self::$sharedDb->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-                self::$sharedDb->exec('PRAGMA journal_mode=WAL');
+
+                try {
+                    self::$sharedDb->exec('PRAGMA journal_mode=WAL');
+                } catch (\Throwable $e) {
+                    self::$sharedDb->exec('PRAGMA journal_mode=DELETE');
+                }
                 self::$sharedDb->exec('PRAGMA foreign_keys=ON');
+
+                if ($needsInit) {
+                    $appInstance = new Application();
+                    $appInstance->initSqliteDatabase(self::$sharedDb);
+                }
             }
         }
         return self::$sharedDb;
