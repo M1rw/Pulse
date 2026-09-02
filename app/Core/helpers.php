@@ -12,7 +12,7 @@ if (!function_exists('env')) {
     function env(string $key, mixed $default = null): mixed
     {
         $val = $_ENV[$key] ?? getenv($key);
-        if ($val === false) return $default;
+        if ($val === false || $val === null || $val === '') return $default;
         // handle "true", "false", "null" strings
         switch (strtolower($val)) {
             case 'true':  return true;
