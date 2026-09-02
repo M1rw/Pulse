@@ -147,7 +147,12 @@ if (!function_exists('log_error')) {
     function log_error(string $message, array $context = []): void
     {
         $logDir = PULSE_STORAGE . '/logs';
-        if (!is_dir($logDir)) mkdir($logDir, 0755, true);
+        if (!is_dir($logDir) && @is_writable(dirname($logDir))) {
+            @mkdir($logDir, 0755, true);
+        }
+        if (!is_dir($logDir) || !@is_writable($logDir)) {
+            $logDir = is_dir('/tmp') && is_writable('/tmp') ? '/tmp' : sys_get_temp_dir();
+        }
         
         $date = date('Y-m-d');
         $time = date('H:i:s');
@@ -157,11 +162,12 @@ if (!function_exists('log_error')) {
             $line .= ' | ' . json_encode($context, JSON_UNESCAPED_UNICODE);
         }
         
-        file_put_contents(
+        @file_put_contents(
             "{$logDir}/pulse-{$date}.log",
             $line . PHP_EOL,
             FILE_APPEND | LOCK_EX
         );
+        error_log("{$message} " . (!empty($context) ? json_encode($context) : ''));
     }
 }
 

@@ -23,6 +23,15 @@ class SessionMiddleware implements MiddlewareInterface
             if (env('APP_ENV') === 'production') {
                 ini_set('session.cookie_secure', '1');
             }
+
+            // Writable session save path fallback for serverless environments (e.g., Vercel)
+            $savePath = session_save_path();
+            if (getenv('VERCEL') !== false || env('VERCEL') !== null || empty($savePath) || !@is_writable($savePath)) {
+                $tmpDir = is_dir('/tmp') && is_writable('/tmp') ? '/tmp' : sys_get_temp_dir();
+                if (@is_writable($tmpDir)) {
+                    session_save_path($tmpDir);
+                }
+            }
             
             session_name('pulse_sid');
             session_start();

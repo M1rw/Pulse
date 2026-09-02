@@ -1,0 +1,1 @@
+{"version":2,"defects":[],"times":{"Tests\\VercelCompatibilityTest::testApplicationBootAndDbInitInTemp":0.022,"Tests\\VercelCompatibilityTest::testModelAutoInitializesDatabase":0.002,"Tests\\VercelCompatibilityTest::testRequestIpDetectionWithProxyHeaders":0.001,"Tests\\VercelCompatibilityTest::testErrorLoggingFallback":0}}
