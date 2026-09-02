@@ -27,7 +27,7 @@ class Collection implements \Countable, \IteratorAggregate, \ArrayAccess, \JsonS
         return new static($results);
     }
 
-    public function filter(\Closure $callback = null): static
+    public function filter(?\Closure $callback = null): static
     {
         if ($callback === null) {
             return new static(array_values(array_filter($this->items)));
@@ -84,7 +84,7 @@ class Collection implements \Countable, \IteratorAggregate, \ArrayAccess, \JsonS
         );
     }
 
-    public function first(\Closure $callback = null): mixed
+    public function first(?\Closure $callback = null): mixed
     {
         if ($callback) {
             foreach ($this->items as $key => $item) {
@@ -95,7 +95,7 @@ class Collection implements \Countable, \IteratorAggregate, \ArrayAccess, \JsonS
         return $this->items[0] ?? null;
     }
 
-    public function last(\Closure $callback = null): mixed
+    public function last(?\Closure $callback = null): mixed
     {
         if ($callback) {
             foreach (array_reverse($this->items) as $key => $item) {
